@@ -78,6 +78,7 @@ services:
       aliasgroup1: https://${WOPISERVER_DOMAIN:-wopiserver.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-}
       DONT_GEN_SSL_CERT: "YES"
       extra_params: |
+        --o:security.seccomp=false
         --o:hexify_embedded_urls=true
         --o:ssl.enable=${COLLABORA_SSL_ENABLE:-true} \
         --o:ssl.ssl_verification=${COLLABORA_SSL_VERIFICATION:-true} \
