@@ -55,20 +55,46 @@ services:
       OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS: "${OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS:-1}"
       # default language for services/WebUI; defaults to English, language code (ISO 639-1, e.g. de, en, fr)
       OC_DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE}
+      PROXY_HTTP_ADDR: "0.0.0.0:9200"
+    ports:
+      - "9200:9200"
     volumes:
       - ./config/opencloud/csp.yaml:/etc/opencloud/csp.yaml
       - ./config/opencloud/banned-password-list.txt:/etc/opencloud/banned-password-list.txt
+      - ./config/opencloud/proxy.yaml:/etc/opencloud/proxy.yaml
       # configure the .env file to use own paths instead of docker internal volumes
       - ${OC_CONFIG_DIR:-opencloud-config}:/etc/opencloud
       - ${OC_DATA_DIR:-opencloud-data}:/var/lib/opencloud
       - ${OC_APPS_DIR:-./config/opencloud/apps}:/var/lib/opencloud/web/assets/apps
     logging:
       driver: ${LOG_DRIVER:-local}
-    restart: always
+    restart: unless-stopped 
+  collaboration:
+   ports:
+    # expose the wopi server on all interfaces
+    - "0.0.0.0:9300"
+  collabora:
+   ports:
+    # expose the collabora server on all interfaces
+    - "0.0.0.0:9980"
+
+  radicale:
+    image: ${RADICALE_DOCKER_IMAGE:-opencloudeu/radicale}:${RADICALE_DOCKER_TAG:-latest}
+    networks:
+      dokploy-network:
+    logging:
+      driver: ${LOG_DRIVER:-local}
+    restart: unless-stopped
+    volumes:
+      - ./config/radicale/config:/etc/radicale/config
+      - ${RADICALE_DATA_DIR:-radicale-data}:/var/lib/radicale
+
+
 
 volumes:
   opencloud-config:
   opencloud-data:
+  radicale-data:
 
 networks:
   dokploy-network:
