@@ -68,15 +68,84 @@ services:
     logging:
       driver: ${LOG_DRIVER:-local}
     restart: unless-stopped 
+    
   collaboration:
-   ports:
-    # expose the wopi server on all interfaces
-    - "9300:9300"
-  collabora:
-   ports:
-    # expose the collabora server on all interfaces
-    - "9980:9980"
+    image: ${OC_DOCKER_IMAGE:-opencloudeu/opencloud-rolling}:${OC_DOCKER_TAG:-latest}
+    user: ${OC_CONTAINER_UID_GID:-1000:1000}
+    networks:
+      dokploy-network:
+    depends_on:
+      opencloud:
+        condition: service_started
+      collabora:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+    command: [ "-c", "opencloud collaboration server" ]
+    environment:
+      COLLABORATION_GRPC_ADDR: 0.0.0.0:9301
+      COLLABORATION_HTTP_ADDR: 0.0.0.0:9300
+      MICRO_REGISTRY: "nats-js-kv"
+      MICRO_REGISTRY_ADDRESS: "opencloud:9233"
+      COLLABORATION_WOPI_SRC: https://${WOPISERVER_DOMAIN:-wopiserver.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-}
+      COLLABORATION_APP_NAME: "CollaboraOnline"
+      COLLABORATION_APP_PRODUCT: "Collabora"
+      COLLABORATION_APP_ADDR: https://${COLLABORA_DOMAIN:-collabora.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-}
+      COLLABORATION_APP_ICON: https://${COLLABORA_DOMAIN:-collabora.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-}/favicon.ico
+      COLLABORATION_APP_INSECURE: "${INSECURE:-true}"
+      COLLABORATION_CS3API_DATAGATEWAY_INSECURE: "${INSECURE:-true}"
+      COLLABORATION_LOG_LEVEL: ${LOG_LEVEL:-info}
+      OC_URL: https://${OC_DOMAIN:-cloud.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-}
+    ports:
+      # expose the wopi server on all interfaces
+      - "9300:9300"
+    volumes:
+      # configure the .env file to use own paths instead of docker internal volumes
+      - ${OC_CONFIG_DIR:-opencloud-config}:/etc/opencloud
+    logging:
+      driver: ${LOG_DRIVER:-local}
+    restart: always
 
+  collabora:
+    image: collabora/code:25.04.7.1.1
+    # release notes: https://www.collaboraonline.com/release-notes/
+    networks:
+      dokploy-network:
+    environment:
+      aliasgroup1: https://${WOPISERVER_DOMAIN:-wopiserver.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-}
+      DONT_GEN_SSL_CERT: "YES"
+      extra_params: |
+        --o:hexify_embedded_urls=true
+        --o:ssl.enable=${COLLABORA_SSL_ENABLE:-true} \
+        --o:ssl.ssl_verification=${COLLABORA_SSL_VERIFICATION:-true} \
+        --o:ssl.termination=true \
+        --o:welcome.enable=false \
+        --o:net.frame_ancestors=${OC_DOMAIN:-cloud.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-} \
+        --o:net.lok_allow.host[14]=${OC_DOMAIN:-cloud.opencloud.test}${TRAEFIK_PORT_HTTPS:+:}${TRAEFIK_PORT_HTTPS:-} \
+        --o:home_mode.enable=${COLLABORA_HOME_MODE:-false}
+      username: ${COLLABORA_ADMIN_USER:-admin}
+      password: ${COLLABORA_ADMIN_PASSWORD:-admin}
+    cap_add:
+      - MKNOD
+    ports:
+        # expose the collabora server on all interfaces
+      - "9980:9980"  
+    volumes:
+      # Mount local TrueType fonts so the container can use system fonts
+      # (e.g. Microsoft fonts like Arial, Calibri, Cambria by installing the `ttf-mscorefonts-installer` package).
+      - /usr/share/fonts/truetype:/usr/share/fonts/truetype/more:ro
+      - /usr/share/fonts/truetype:/opt/cool/systemplate/usr/share/fonts/truetype/more:ro
+    logging:
+      driver: ${LOG_DRIVER:-local}
+    restart: always
+    entrypoint: [ '/bin/bash', '-c' ]
+    command: [ 'coolconfig generate-proof-key && /start-collabora-online.sh' ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9980/hosting/discovery" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      
   radicale:
     image: ${RADICALE_DOCKER_IMAGE:-opencloudeu/radicale}:${RADICALE_DOCKER_TAG:-latest}
     networks:
