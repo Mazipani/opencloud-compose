@@ -107,7 +107,7 @@ services:
     restart: always
 
   collabora:
-    image: collabora/code:25.04.7.1.1
+    image: collabora/code
     # release notes: https://www.collaboraonline.com/release-notes/
     networks:
       dokploy-network:
