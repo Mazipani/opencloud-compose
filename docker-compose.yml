@@ -55,7 +55,6 @@ services:
       OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS: "${OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS:-1}"
       # default language for services/WebUI; defaults to English, language code (ISO 639-1, e.g. de, en, fr)
       OC_DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE}
-      PROXY_HTTP_ADDR: "0.0.0.0:9200"
     ports:
       - "9200:9200"
     volumes:
@@ -72,11 +71,11 @@ services:
   collaboration:
    ports:
     # expose the wopi server on all interfaces
-    - "0.0.0.0:9300"
+    - "9300:9300"
   collabora:
    ports:
     # expose the collabora server on all interfaces
-    - "0.0.0.0:9980"
+    - "9980:9980"
 
   radicale:
     image: ${RADICALE_DOCKER_IMAGE:-opencloudeu/radicale}:${RADICALE_DOCKER_TAG:-latest}
