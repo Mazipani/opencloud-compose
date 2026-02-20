@@ -157,9 +157,16 @@ services:
     volumes:
       - ./config/radicale/config:/etc/radicale/config
       - ${RADICALE_DATA_DIR:-radicale-data}:/var/lib/radicale
-
-
-
+  nats:
+    image: nats:2.10-alpine
+    networks:
+      dokploy-network: null
+    ports:
+      - 9233:9233
+    command: ["-p", "9233", "-m", "8222"]
+    restart: unless-stopped
+    logging:
+      driver: ${LOG_DRIVER:-local}
 volumes:
   opencloud-config:
   opencloud-data:
